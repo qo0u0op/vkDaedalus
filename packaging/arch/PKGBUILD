@@ -12,7 +12,7 @@ makedepends=('git' 'glslang' 'meson' 'ninja' 'pkgconf' 'spirv-headers' 'vulkan-h
 provides=('vkdaedalus')
 conflicts=('vkbasalt-overlay-wayland-git')
 replaces=('vkbasalt-overlay-wayland-git')
-source=("$pkgname::git+https://github.com/Daaboulex/vkDaedalus.git")
+source=("$pkgname::git+https://github.com/qo0u0op/vkDaedalus.git")
 sha256sums=('SKIP')
 
 pkgver() {
