@@ -65,3 +65,10 @@ venv/
 /subprojects/*
 !/subprojects/*.wrap
 !/subprojects/packagefiles/
+
+# repo-specific — Arch makepkg artifacts
+packaging/arch/pkg/
+packaging/arch/src/
+packaging/arch/vkdaedalus-git
+packaging/arch/*.pkg.tar.*
+packaging/arch/*.src.tar.*
