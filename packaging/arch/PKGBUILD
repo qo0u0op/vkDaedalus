@@ -20,6 +20,12 @@ pkgver() {
   printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
 }
 
+prepare() {
+  cd "$srcdir/$pkgname"
+  # arch-meson 預設 --wrap-mode=nodownload，先自行下載子專案
+  meson subprojects download
+}
+
 build() {
   cd "$srcdir/$pkgname"
   arch-meson build --buildtype=release
