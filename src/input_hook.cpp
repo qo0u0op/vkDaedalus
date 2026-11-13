@@ -35,14 +35,14 @@ namespace
         GetClass    getClass    = nullptr;
     };
 
+    // RTLD_NEXT for the same reason as in xlib(): a handle on libwayland-client walks the global scope
+    // and can answer with another preloaded interposer instead of the library itself.
     const Wayland& wayland()
     {
         static const Wayland found = [] {
-            Wayland      functions;
-            void* const  library = dlopen("libwayland-client.so.0", RTLD_NOW | RTLD_NOLOAD);
-            void* const  from    = library != nullptr ? library : RTLD_NEXT;
-            functions.addListener = reinterpret_cast<AddListener>(dlsym(from, "wl_proxy_add_listener"));
-            functions.getClass    = reinterpret_cast<GetClass>(dlsym(from, "wl_proxy_get_class"));
+            Wayland functions;
+            functions.addListener = reinterpret_cast<AddListener>(dlsym(RTLD_NEXT, "wl_proxy_add_listener"));
+            functions.getClass    = reinterpret_cast<GetClass>(dlsym(RTLD_NEXT, "wl_proxy_get_class"));
             if (functions.addListener == nullptr || functions.getClass == nullptr)
                 std::fprintf(stderr, "vkdaedalus input hook: libwayland-client's wl_proxy_add_listener was not found, so no listener can be added\n");
             return functions;
@@ -327,15 +327,15 @@ namespace
         XcbRead wait       = nullptr;
     };
 
+    // RTLD_NEXT for the same reason as in xlib(): a handle on libxcb walks the global scope and can
+    // answer with another preloaded interposer instead of libxcb itself.
     const Xcb& xcb()
     {
         static const Xcb found = [] {
-            Xcb         functions;
-            void* const library = dlopen("libxcb.so.1", RTLD_NOW | RTLD_NOLOAD);
-            void* const from    = library != nullptr ? library : RTLD_NEXT;
-            functions.poll       = reinterpret_cast<XcbRead>(dlsym(from, "xcb_poll_for_event"));
-            functions.pollQueued = reinterpret_cast<XcbRead>(dlsym(from, "xcb_poll_for_queued_event"));
-            functions.wait       = reinterpret_cast<XcbRead>(dlsym(from, "xcb_wait_for_event"));
+            Xcb functions;
+            functions.poll       = reinterpret_cast<XcbRead>(dlsym(RTLD_NEXT, "xcb_poll_for_event"));
+            functions.pollQueued = reinterpret_cast<XcbRead>(dlsym(RTLD_NEXT, "xcb_poll_for_queued_event"));
+            functions.wait       = reinterpret_cast<XcbRead>(dlsym(RTLD_NEXT, "xcb_wait_for_event"));
             return functions;
         }();
         return found;
@@ -366,17 +366,21 @@ namespace
         ConnectionOf         connectionOf = nullptr;
     };
 
+    // Look the real Xlib calls up after this hook, never through libX11's handle: libX11 is loaded
+    // when the process starts, so dlsym on its handle walks the global scope and answers with the
+    // first definition there, which is another preloaded interposer such as Steam's
+    // gameoverlayrenderer.so. That interposer resolves its own XWarpPointer with RTLD_NEXT, i.e. this
+    // hook, so each one tail-called the other: the game spun at full speed in Wine's XWarpPointer
+    // and never left its window setup. RTLD_NEXT here always moves forward in link order, so the
+    // chain ends at libX11.
     const Xlib& xlib()
     {
         static const Xlib found = [] {
-            Xlib        functions;
-            void* const x11  = dlopen("libX11.so.6", RTLD_NOW | RTLD_NOLOAD);
-            void* const from = x11 != nullptr ? x11 : RTLD_NEXT;
-            void* const xcb  = dlopen("libX11-xcb.so.1", RTLD_NOW | RTLD_NOLOAD);
-            functions.query        = reinterpret_cast<QueryPointer>(dlsym(from, "XQueryPointer"));
-            functions.warp         = reinterpret_cast<WarpPointer>(dlsym(from, "XWarpPointer"));
-            functions.translate    = reinterpret_cast<TranslateCoordinates>(dlsym(from, "XTranslateCoordinates"));
-            functions.connectionOf = reinterpret_cast<ConnectionOf>(dlsym(xcb != nullptr ? xcb : RTLD_DEFAULT, "XGetXCBConnection"));
+            Xlib functions;
+            functions.query        = reinterpret_cast<QueryPointer>(dlsym(RTLD_NEXT, "XQueryPointer"));
+            functions.warp         = reinterpret_cast<WarpPointer>(dlsym(RTLD_NEXT, "XWarpPointer"));
+            functions.translate    = reinterpret_cast<TranslateCoordinates>(dlsym(RTLD_NEXT, "XTranslateCoordinates"));
+            functions.connectionOf = reinterpret_cast<ConnectionOf>(dlsym(RTLD_NEXT, "XGetXCBConnection"));
             return functions;
         }();
         return found;
