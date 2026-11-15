@@ -20,6 +20,12 @@ pkgver() {
   printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
 }
 
+prepare() {
+  cd "$srcdir/$pkgname"
+  # arch-meson passes --wrap-mode=nodownload, so fetch the wraps before setup
+  meson subprojects download
+}
+
 build() {
   cd "$srcdir/$pkgname"
   arch-meson build --buildtype=release
